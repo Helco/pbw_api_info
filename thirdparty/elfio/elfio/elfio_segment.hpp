@@ -56,7 +56,7 @@ class segment
     ELFIO_SET_ACCESS_DECL( Elf_Half,  index  );
     
     virtual const std::vector<Elf_Half>& get_sections() const               = 0;
-    virtual void load( std::istream& stream, std::streampos header_offset ) = 0;
+    virtual void load( Loader* loader, unsigned int header_offset ) = 0;
     virtual void save( std::ostream& f,      std::streampos header_offset,
                                              std::streampos data_offset )   = 0;
 };
@@ -173,15 +173,15 @@ class segment_impl : public segment
 
 //------------------------------------------------------------------------------
     void
-    load( std::istream&  stream,
-          std::streampos header_offset )
+    load( Loader* loader, unsigned int header_offset )
     {
-        stream.seekg( header_offset );
-        stream.read( reinterpret_cast<char*>( &ph ), sizeof( ph ) );
+        //stream.seekg( header_offset );
+        //stream.read( reinterpret_cast<char*>( &ph ), sizeof( ph ) );
+		loader->read(&ph, header_offset, sizeof(ph));
         is_offset_set = true;
 
         if ( PT_NULL != get_type() && 0 != get_file_size() ) {
-            stream.seekg( (*convertor)( ph.p_offset ) );
+            //stream.seekg( (*convertor)( ph.p_offset ) );
             Elf_Xword size = get_file_size();
             try {
                 data = new char[size];
@@ -189,7 +189,8 @@ class segment_impl : public segment
                 data = 0;
             }
             if ( 0 != data ) {
-                stream.read( data, size );
+                //stream.read( data, size );
+				loader->read(data, ph.p_offset, size);
             }
         }
     }

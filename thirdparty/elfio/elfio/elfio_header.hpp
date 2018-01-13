@@ -24,6 +24,7 @@ THE SOFTWARE.
 #define ELF_HEADER_HPP
 
 #include <iostream>
+#include <elfio/elfio_loader.hpp>
 
 namespace ELFIO {
 
@@ -31,7 +32,7 @@ class elf_header
 {
   public:
     virtual ~elf_header() {};
-    virtual bool load( std::istream& stream )       = 0;
+    virtual bool load( Loader* loader )       = 0;
     virtual bool save( std::ostream& stream ) const = 0;
 
     // ELF header functions
@@ -98,12 +99,12 @@ template< class T > class elf_header_impl : public elf_header
     }
 
     bool
-    load( std::istream& stream )
+    load( Loader* loader )
     {
-        stream.seekg( 0 );
-        stream.read( reinterpret_cast<char*>( &header ), sizeof( header ) );
+        //stream.seekg( 0 );
+        //stream.read( reinterpret_cast<char*>( &header ), sizeof( header ) );
 
-        return (stream.gcount() == sizeof( header ) );
+		return (loader->read(&header, 0, sizeof(header)) == sizeof(header));
     }
 
     bool

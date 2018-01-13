@@ -45,6 +45,7 @@ THE SOFTWARE.
 #include <elfio/elfio_section.hpp>
 #include <elfio/elfio_segment.hpp>
 #include <elfio/elfio_strings.hpp>
+#include <elfio/elfio_loader.hpp>
 
 #define ELFIO_HEADER_ACCESS_GET( TYPE, FNAME ) \
 TYPE                                           \
@@ -103,22 +104,23 @@ class elfio
             return false;
         }
 
-        return load(stream);
+		return false; // load(stream);
     }
 
 //------------------------------------------------------------------------------
-    bool load( std::istream &stream )
+    bool load( Loader* loader)
     {
         clean();
 
         unsigned char e_ident[EI_NIDENT];
 
         // Read ELF file signature
-        stream.seekg( 0 );
-        stream.read( reinterpret_cast<char*>( &e_ident ), sizeof( e_ident ) );
+        //stream.seekg( 0 );
+        //stream.read( reinterpret_cast<char*>( &e_ident ), sizeof( e_ident ) );
+		unsigned int readSize = loader->read(&e_ident, 0, sizeof(e_ident));
 
         // Is it ELF file?
-        if ( stream.gcount() != sizeof( e_ident ) ||
+        if ( readSize != sizeof( e_ident ) ||
              e_ident[EI_MAG0] != ELFMAG0    ||
              e_ident[EI_MAG1] != ELFMAG1    ||
              e_ident[EI_MAG2] != ELFMAG2    ||
@@ -137,12 +139,12 @@ class elfio
         if ( 0 == header ) {
             return false;
         }
-        if ( !header->load( stream ) ) {
+        if ( !header->load( loader ) ) {
             return false;
         }
 
-        load_sections( stream );
-        load_segments( stream );
+        load_sections( loader );
+        load_segments( loader );
 
         return true;
     }
@@ -350,7 +352,7 @@ class elfio
     }
 
 //------------------------------------------------------------------------------
-    Elf_Half load_sections( std::istream& stream )
+    Elf_Half load_sections( Loader* loader)
     {
         Elf_Half  entry_size = header->get_section_entry_size();
         Elf_Half  num        = header->get_sections_num();
@@ -358,7 +360,7 @@ class elfio
 
         for ( Elf_Half i = 0; i < num; ++i ) {
             section* sec = create_section();
-            sec->load( stream, (std::streamoff)offset + i * entry_size );
+            sec->load( loader, offset + i * entry_size );
             sec->set_index( i );
             // To mark that the section is not permitted to reassign address
             // during layout calculation
@@ -382,7 +384,7 @@ class elfio
     }
 
 //------------------------------------------------------------------------------
-    bool load_segments( std::istream& stream )
+    bool load_segments( Loader* loader )
     {
         Elf_Half  entry_size = header->get_segment_entry_size();
         Elf_Half  num        = header->get_segments_num();
@@ -402,7 +404,7 @@ class elfio
                 return false;
             }
 
-            seg->load( stream, (std::streamoff)offset + i * entry_size );
+            seg->load( loader, offset + i * entry_size );
             seg->set_index( i );
 
             // Add sections to the segments (similar to readelfs algorithm)

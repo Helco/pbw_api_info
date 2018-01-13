@@ -25,6 +25,7 @@ THE SOFTWARE.
 
 #include <string>
 #include <iostream>
+#include <elfio/elfio_loader.hpp>
 
 namespace ELFIO {
 
@@ -56,8 +57,7 @@ class section
     ELFIO_GET_SET_ACCESS_DECL( Elf64_Off, offset );
     ELFIO_SET_ACCESS_DECL( Elf_Half,  index  );
     
-    virtual void load( std::istream&  f,
-                       std::streampos header_offset ) = 0;
+    virtual void load( Loader* loader, unsigned int offset ) = 0;
     virtual void save( std::ostream&  f,
                        std::streampos header_offset,
                        std::streampos data_offset )   = 0;
@@ -219,12 +219,12 @@ class section_impl : public section
 
 //------------------------------------------------------------------------------
     void
-    load( std::istream&  stream,
-          std::streampos header_offset )
+    load( Loader* loader, unsigned int header_offset )
     {
         std::fill_n( reinterpret_cast<char*>( &header ), sizeof( header ), '\0' );
-        stream.seekg( header_offset );
-        stream.read( reinterpret_cast<char*>( &header ), sizeof( header ) );
+        //stream.seekg( header_offset );
+        //stream.read( reinterpret_cast<char*>( &header ), sizeof( header ) );
+		loader->read(&header, header_offset, sizeof(header));
 
         Elf_Xword size = get_size();
         if ( 0 == data && SHT_NULL != get_type() && SHT_NOBITS != get_type() ) {
@@ -235,8 +235,9 @@ class section_impl : public section
                 data_size = 0;
             }
             if ( 0 != size ) {
-                stream.seekg( (*convertor)( header.sh_offset ) );
-                stream.read( data, size );
+                //stream.seekg( (*convertor)( header.sh_offset ) );
+                //stream.read( data, size );
+				loader->read(data, header.sh_offset, size);
                 data_size = size;
             }
         }
