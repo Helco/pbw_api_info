@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 
-static constexpr char* ArMagic = "!<arch>\n";
+static constexpr char ArMagic[] = "!<arch>\n";
 static constexpr uint32_t ArMagicLen = 8;
 static constexpr uint8_t ArFMagic[2] = { '`', '\n' };
 

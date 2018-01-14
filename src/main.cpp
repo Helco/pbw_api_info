@@ -4,6 +4,9 @@
 #include <string>
 #include <algorithm>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #define INDENT_CHARACTER ' '
 #define INDENT_WIDTH 2
 
@@ -24,7 +27,7 @@ static const char* PlatformNames[ArgPlatformCount] = {
 struct ProgramArguments {
 	bool verbose = false;
 #ifndef WIN32
-	std::string sdkroot = "~/.pebble-sdk/SDKs/current/";
+	std::string sdkroot = "~/.pebble-sdk/SDKs/current/sdk-core/";
 #else
 	std::string sdkroot = "";
 #endif

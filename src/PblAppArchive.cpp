@@ -37,10 +37,10 @@ bool PblAppArchive::load(const char* filename, bool verbose) {
 		name.resize(mz_zip_reader_get_filename(&archive, i, nullptr, 0));
 		mz_zip_reader_get_filename(&archive, i, &name[0], name.length());
 
-		uint32_t posApp = name.find("pebble-app.bin");
+		size_t posApp = name.find("pebble-app.bin");
 		if (posApp == std::string::npos)
 			continue;
-		uint32_t slashPos = name.rfind('/', posApp);
+		size_t slashPos = name.rfind('/', posApp);
 		if (slashPos == std::string::npos)
 			info.platform = "aplite";
 		else
@@ -68,7 +68,9 @@ const char* PblAppArchive::getBinaryPlatform(uint32_t index) const {
 void* PblAppArchive::extractBinary(uint32_t index, uint32_t* size, bool verbose) {
 	if (index >= binaries.size() || size == nullptr)
 		return nullptr;
-	void* result = mz_zip_reader_extract_to_heap(&archive, binaries[index].fileIndex, size, 0);
+	size_t tmpSize;
+	void* result = mz_zip_reader_extract_to_heap(&archive, binaries[index].fileIndex, &tmpSize, 0);
+        *size = tmpSize;
 	if (!result && verbose) {
 		const char* errString = mz_zip_get_error_string(mz_zip_get_last_error(&archive));
 		std::cerr << "Could not extract binary for " << binaries[index].platform << ": " << errString << std::endl;
