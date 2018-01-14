@@ -1,6 +1,9 @@
 test
 
 .vscode
+*.vcxproj
+*.vcxproj.filters
+*.sln
 
 # CMake
 CMakeCache.txt
