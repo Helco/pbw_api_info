@@ -99,7 +99,7 @@ bool PblLibrary::loadFromELF(ELFIO::Loader* loader, bool verbose) {
 
 	verbose && std::cerr << "Found " << functions.size() << " functions for " << platformName << std::endl;
 
-	return true;
+	return functions.size() > 0;
 }
 
 const char* PblLibrary::getPlatformName() const {

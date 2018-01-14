@@ -14,8 +14,6 @@ uint32_t PblAppBinary::scan() {
 	uint8_t* end = code + size;
 	code += sizeof(PblAppHeader);
 
-	int d;
-
 	// TODO: This is a really slow memory search
 	for (; code != end; code++) {
 		for (uint32_t i = 0; i < library->getFunctionCount(); i++) {
@@ -23,9 +21,6 @@ uint32_t PblAppBinary::scan() {
 			uint32_t funcCodeSize = library->getFunctionCodeSize(i);
 			if (code + funcCodeSize > end)
 				continue;
-
-			if (code - buffer == 0x3DC && i == 31)
-				d = 3;
 
 			// compare code
 			uint32_t relocOff = library->getFunctionRelocatedOffset(i);

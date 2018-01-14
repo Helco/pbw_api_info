@@ -25,7 +25,7 @@ PblAppArchive::~PblAppArchive() {
 
 bool PblAppArchive::load(const char* filename, bool verbose) {
 	if (!mz_zip_reader_init_file(&archive, filename, 0)) {
-		verbose && std::cerr << "Could not open pebble pp: " << mz_zip_get_error_string(mz_zip_get_last_error(&archive)) << std::endl;
+		verbose && std::cerr << "Could not open pebble app archive: " << mz_zip_get_error_string(mz_zip_get_last_error(&archive)) << std::endl;
 		return false;
 	}
 
