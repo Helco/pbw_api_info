@@ -89,6 +89,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\thirdparty\elfio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -115,6 +116,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\thirdparty\elfio;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,6 +141,38 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\ArArchive.cpp" />
+    <ClCompile Include="..\src\PblAppArchive.cpp" />
+    <ClCompile Include="..\src\PblAppBinary.cpp" />
+    <ClCompile Include="..\src\PblLibrary.cpp" />
+    <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\thirdparty\json11\json11.cpp" />
+    <ClCompile Include="..\thirdparty\miniz\miniz.c" />
+    <ClCompile Include="..\thirdparty\miniz\miniz_tdef.c" />
+    <ClCompile Include="..\thirdparty\miniz\miniz_tinfl.c" />
+    <ClCompile Include="..\thirdparty\miniz\miniz_zip.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\src\pbw_api_info.h" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio_dump.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio_dynamic.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio_header.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio_loader.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio_note.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio_relocation.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio_section.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio_segment.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio_strings.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio_symbols.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elfio_utils.hpp" />
+    <ClInclude Include="..\thirdparty\elfio\elfio\elf_types.hpp" />
+    <ClInclude Include="..\thirdparty\json11\json11.hpp" />
+    <ClInclude Include="..\thirdparty\miniz\miniz.h" />
+    <ClInclude Include="..\thirdparty\miniz\miniz_common.h" />
+    <ClInclude Include="..\thirdparty\miniz\miniz_tdef.h" />
+    <ClInclude Include="..\thirdparty\miniz\miniz_tinfl.h" />
+    <ClInclude Include="..\thirdparty\miniz\miniz_zip.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
