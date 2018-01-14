@@ -213,17 +213,27 @@ bool isFile(const char* filename) {
 
 // cares about unix/windows path variants
 std::string joinPath(const std::string& base, const char* spec) {
-	std::string result;
-	if (*spec == '/' || *spec == '\\')
-		spec++;
-	if (base[base.length() - 1] != '/' && base[base.length() - 1] != '\\')
-		result = base + "/" + spec;
-	else
-		result = base + spec;
+	std::string result = base;
+	if (spec != nullptr) {
+		if (*spec == '/' || *spec == '\\')
+			spec++;
+		if (base[base.length() - 1] != '/' && base[base.length() - 1] != '\\')
+			result += std::string("/") + spec;
+		else
+			result += spec;
+	}
 #ifdef WIN32
 	std::replace(result.begin(), result.end(), '/', '\\');
 #else
 	std::replace(result.begin(), result.end(), '\\', '/');
+
+	if (result[0] == '~') {
+		const char *homedir = getenv("HOME");
+		if (homedir != nullptr) {
+			result.erase(result.begin());
+			result.insert(0, homedir);
+		}
+	}
 #endif
 	return result;
 }
@@ -275,7 +285,8 @@ int main(int argc, char* argv[]) {
 
 	// Load from SDK root
 	if (args.sdkroot != "") {
-		if (!isDirectory(args.sdkroot.c_str())) {
+		std::string sdkRoot = joinPath(args.sdkroot, nullptr);
+		if (!isDirectory(sdkRoot.c_str())) {
 			if (args.defaultSdkroot)
 				args.verbose && std::cerr << "Could not find any installed core sdk" << std::endl;
 			else
@@ -283,7 +294,7 @@ int main(int argc, char* argv[]) {
 		}
 		else {
 			bool foundSomeLib = false;
-			std::string libDirPath = joinPath(args.sdkroot, "pebble/");
+			std::string libDirPath = joinPath(sdkRoot, "pebble/");
 			for (int i = 0; i < ArgPlatformCount; i++) {
 				std::string libPath = joinPath(libDirPath, PlatformNames[i]);
 				libPath = joinPath(libPath, "lib/libpebble.a");
