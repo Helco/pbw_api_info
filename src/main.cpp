@@ -135,9 +135,12 @@ bool parseArguments(ProgramArguments& args, int argc, char* argv[]) {
 	}
 
 	// Read input/output paths
-	if (parser.argi >= parser.argc && !args.mapLibFunctions) {
-		std::cerr << "expected input file path" << std::endl;
-		return false;
+	if (parser.argi >= parser.argc) {
+		if (!args.mapLibFunctions) {
+			std::cerr << "expected input file path" << std::endl;
+			return false;
+		}
+		return true;
 	}
 	args.inputFile.assign(parser.argv[parser.argi++]);
 
