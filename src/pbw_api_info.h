@@ -142,6 +142,7 @@ public:
 	uint32_t getUsedFunctionCount() const;
 	uint32_t getUsedFunctionIndex(uint32_t index) const;
 	const char* getUsedFunctionName(uint32_t index) const;
+	uint32_t getUsedFunctionSymbolTableOffset(uint32_t index) const;
 };
 
 #endif // PBW_API_INFO_H

@@ -68,3 +68,10 @@ const char* PblAppBinary::getUsedFunctionName(uint32_t index) const {
 	else
 		return library->getFunctionName(usedFunctions[index]);
 }
+
+uint32_t PblAppBinary::getUsedFunctionSymbolTableOffset(uint32_t index) const {
+	if (index >= usedFunctions.size())
+		return UINT32_MAX;
+	else
+		return library->getFunctionSymbolTableOffset(usedFunctions[index]);
+}

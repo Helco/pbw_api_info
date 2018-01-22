@@ -33,6 +33,7 @@ struct ProgramArguments {
 #endif
 	bool defaultSdkroot = true;
 	bool mapLibFunctions = false;
+	bool outputSymbolOffsets = false;
 	std::string inputFile = "null";
 	std::string outputFile; // if "" then output to stdout
 	std::string libPath[ArgPlatformCount];
@@ -53,6 +54,7 @@ void printHelp() {
 		<< "  --libpath-<platform>  -> Sets the path of a single platform import library" << std::endl
 		<< "    <platform> may be: aplite, basalt, diorite, chalk, emery" << std::endl
 		<< "  --map-lib-functions   -> Outputs all functions of the libraries" << std::endl
+		<< "  --symbol-offset       -> Outputs functions as their symbol table offset" << std::endl
 		<< "  -v --verbose          -> Prints detailed progress information to stderr" << std::endl
 		<< std::endl;
 }
@@ -128,6 +130,8 @@ bool parseArguments(ProgramArguments& args, int argc, char* argv[]) {
 			args.libPath[ArgPlatform_Emery] = optionValue;
 		else if (strcmp(curArg, "--map-lib-functions") == 0)
 			args.mapLibFunctions = true;
+		else if (strcmp(curArg, "--symbol-offset") == 0)
+			args.outputSymbolOffsets = true;
 		else {
 			std::cerr << "unknown option \"" << curArg << "\"" << std::endl;
 			return false;
@@ -250,7 +254,7 @@ void outputIndent(std::ostream& output, uint32_t indent) {
 		output << INDENT_CHARACTER;
 }
 
-void outputBinary(std::ostream& output, PblAppBinary* binary, uint32_t indent) {
+void outputBinary(std::ostream& output, PblAppBinary* binary, uint32_t indent, bool asSymbolOffset) {
 	output << "{" << std::endl;
 	outputIndent(output, indent + INDENT_WIDTH);
 	output << "\"usedAPIs\": [" << std::endl;
@@ -258,7 +262,10 @@ void outputBinary(std::ostream& output, PblAppBinary* binary, uint32_t indent) {
 		if (i > 0)
 			output << "," << std::endl;
 		outputIndent(output, indent + 2*INDENT_WIDTH);
-		output << "\"" << binary->getUsedFunctionName(i) << "\"";
+		if (asSymbolOffset)
+			output << binary->getUsedFunctionSymbolTableOffset(i);
+		else
+			output << "\"" << binary->getUsedFunctionName(i) << "\"";
 	}
 	output << std::endl;
 	outputIndent(output, indent + INDENT_WIDTH);
@@ -430,7 +437,7 @@ int main(int argc, char* argv[]) {
 				output << "," << std::endl;
 			outputIndent(output, 2 * INDENT_WIDTH);
 			output << "\"" << binaries[i]->getPlatformName() << "\": ";
-			outputBinary(output, binaries[i], 2 * INDENT_WIDTH);
+			outputBinary(output, binaries[i], 2 * INDENT_WIDTH, args.outputSymbolOffsets);
 		}
 		output << std::endl;
 		outputIndent(output, 1 * INDENT_WIDTH);
