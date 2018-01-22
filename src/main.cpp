@@ -139,9 +139,12 @@ bool parseArguments(ProgramArguments& args, int argc, char* argv[]) {
 	}
 
 	// Read input/output paths
-	if (parser.argi >= parser.argc && !args.mapLibFunctions) {
-		std::cerr << "expected input file path" << std::endl;
-		return false;
+	if (parser.argi >= parser.argc) {
+		if (!args.mapLibFunctions) {
+			std::cerr << "expected input file path" << std::endl;
+			return false;
+		}
+		return true;
 	}
 	args.inputFile.assign(parser.argv[parser.argi++]);
 
@@ -281,10 +284,18 @@ void outputFunctions(std::ostream& output, PlatformList& platforms, uint32_t ind
 	for (; itPlatform != platforms.end(); ++itPlatform) {
 		for (uint32_t i = 0; i < (*itPlatform)->library.getFunctionCount(); i++) {
 			uint32_t symbolTableOff = (*itPlatform)->library.getFunctionSymbolTableOffset(i);
+			std::string funcName = (*itPlatform)->library.getFunctionName(i);
 			if (symbolTableOff == UINT32_MAX)
 				continue;
 			functions.resize(symbolTableOff + 1);
-			functions[symbolTableOff].push_back((*itPlatform)->library.getFunctionName(i));
+
+			uint32_t j;
+			for (j = 0; j < functions[symbolTableOff].size(); j++) {
+				if (functions[symbolTableOff][j] == funcName)
+					break;
+			}
+			if (j >= functions[symbolTableOff].size())
+				functions[symbolTableOff].push_back(funcName);
 		}
 	}
 
@@ -308,6 +319,9 @@ void outputFunctions(std::ostream& output, PlatformList& platforms, uint32_t ind
 				outputIndent(output, indent + 2 * INDENT_WIDTH);
 				output << "\"" << itFunction->at(i) << "\"";
 			}
+			output << std::endl;
+			outputIndent(output, indent + INDENT_WIDTH);
+			output << "]";
 		}
 	}
 	output << std::endl;
