@@ -38,6 +38,7 @@ set(sources_miniz
 assign_source_group(${sources_miniz})
 
 set(sources_pbw_api_info
+  src/pbw_api_info.h
   src/ArArchive.cpp
   src/PblAppArchive.cpp
   src/PblAppBinary.cpp

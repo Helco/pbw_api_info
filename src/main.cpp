@@ -32,7 +32,8 @@ struct ProgramArguments {
 	std::string sdkroot = "";
 #endif
 	bool defaultSdkroot = true;
-	std::string inputFile;
+	bool mapLibFunctions = false;
+	std::string inputFile = "null";
 	std::string outputFile; // if "" then output to stdout
 	std::string libPath[ArgPlatformCount];
 };
@@ -45,12 +46,13 @@ struct ProgramArgumentParser {
 
 void printHelp() {
 	std::cerr
-		<< "usage: pbw_api_info [options] inputfile [outputfile]" << std::endl << std::endl
+		<< "usage: pbw_api_info [options] [inputfile|'null'] [outputfile]" << std::endl << std::endl
 		<< "options:" << std::endl
 		<< "  -h --help             -> Shows this help screen and exits the program" << std::endl
 		<< "  --sdkroot             -> Sets the path of the *core* sdk" << std::endl
 		<< "  --libpath-<platform>  -> Sets the path of a single platform import library" << std::endl
 		<< "    <platform> may be: aplite, basalt, diorite, chalk, emery" << std::endl
+		<< "  --map-lib-functions   -> Outputs all functions of the libraries" << std::endl
 		<< "  -v --verbose          -> Prints detailed progress information to stderr" << std::endl
 		<< std::endl;
 }
@@ -124,6 +126,8 @@ bool parseArguments(ProgramArguments& args, int argc, char* argv[]) {
 			args.libPath[ArgPlatform_Chalk] = optionValue;
 		else if (isValueArgument(parser, "--libpath-emery", optionValue))
 			args.libPath[ArgPlatform_Emery] = optionValue;
+		else if (strcmp(curArg, "--map-lib-functions") == 0)
+			args.mapLibFunctions = true;
 		else {
 			std::cerr << "unknown option \"" << curArg << "\"" << std::endl;
 			return false;
@@ -131,7 +135,7 @@ bool parseArguments(ProgramArguments& args, int argc, char* argv[]) {
 	}
 
 	// Read input/output paths
-	if (parser.argi >= parser.argc) {
+	if (parser.argi >= parser.argc && !args.mapLibFunctions) {
 		std::cerr << "expected input file path" << std::endl;
 		return false;
 	}
@@ -263,6 +267,47 @@ void outputBinary(std::ostream& output, PblAppBinary* binary, uint32_t indent) {
 	output << "}";
 }
 
+void outputFunctions(std::ostream& output, PlatformList& platforms, uint32_t indent) {
+	// merge platforms
+	std::vector<std::vector<std::string>> functions; // symbol table with array of function names
+	auto itPlatform = platforms.begin();
+	for (; itPlatform != platforms.end(); ++itPlatform) {
+		for (uint32_t i = 0; i < (*itPlatform)->library.getFunctionCount(); i++) {
+			uint32_t symbolTableOff = (*itPlatform)->library.getFunctionSymbolTableOffset(i);
+			if (symbolTableOff == UINT32_MAX)
+				continue;
+			functions.resize(symbolTableOff + 1);
+			functions[symbolTableOff].push_back((*itPlatform)->library.getFunctionName(i));
+		}
+	}
+
+	// output
+	output << "[" << std::endl;
+	auto itFunction = functions.begin();
+	for (; itFunction != functions.end(); ++itFunction) {
+		if (itFunction != functions.begin())
+			output << "," << std::endl;
+		outputIndent(output, indent + INDENT_WIDTH);
+		
+		if (itFunction->size() == 0)
+			output << "[]";
+		else if (itFunction->size() == 1)
+			output << "\"" << itFunction->at(0) << "\"";
+		else {
+			output << "[" << std::endl;
+			for (uint32_t i = 0; i < itFunction->size(); i++) {
+				if (i > 0)
+					output << "," << std::endl;
+				outputIndent(output, indent + 2 * INDENT_WIDTH);
+				output << "\"" << itFunction->at(i) << "\"";
+			}
+		}
+	}
+	output << std::endl;
+	outputIndent(output, indent);
+	output << "]";
+}
+
 /**
  * The entrypoint to this program
  */
@@ -270,6 +315,10 @@ int main(int argc, char* argv[]) {
 	ProgramArguments args;
 	if (!parseArguments(args, argc, argv))
 		return 1;
+	if (args.inputFile == "null" && !args.mapLibFunctions) {
+		std::cerr << "Nothing to do." << std::endl;
+		return 6;
+	}
 
 	PlatformList platforms;
 
@@ -318,36 +367,38 @@ int main(int argc, char* argv[]) {
 
 	// Load pebble app and detect API functions
 	PblAppArchive appArchive;
-	if (!appArchive.load(args.inputFile.c_str(), args.verbose)) {
-		cleanPlatforms(platforms);
-		return 3;
-	}
 	std::vector<PblAppBinary*> binaries;
-	for (uint32_t i = 0; i < appArchive.getBinaryCount(); i++) {
-		PlatformList::iterator itPlatform = findPlatform(platforms, appArchive.getBinaryPlatform(i));
-		if (itPlatform == platforms.end()) {
-			args.verbose && std::cerr << "Library for pebble binary \"" << appArchive.getBinaryPlatform(i) << "\" not loaded" << std::endl;
-			continue;
+	if (args.inputFile != "null") {
+		if (!appArchive.load(args.inputFile.c_str(), args.verbose)) {
+			cleanPlatforms(platforms);
+			return 3;
+		}
+		for (uint32_t i = 0; i < appArchive.getBinaryCount(); i++) {
+			PlatformList::iterator itPlatform = findPlatform(platforms, appArchive.getBinaryPlatform(i));
+			if (itPlatform == platforms.end()) {
+				args.verbose && std::cerr << "Library for pebble binary \"" << appArchive.getBinaryPlatform(i) << "\" not loaded" << std::endl;
+				continue;
+			}
+
+			// Load binary
+			uint32_t size;
+			void* buffer = appArchive.extractBinary(i, &size, args.verbose);
+			if (!buffer)
+				continue;
+			PblAppBinary* binary = new PblAppBinary(buffer, size, &(*itPlatform)->library);
+
+			args.verbose && std::cerr << "Scanning pebble binary \"" << appArchive.getBinaryPlatform(i) << "\"" << std::endl;
+			uint32_t foundAPIs = binary->scan();
+			args.verbose && std::cerr << "Found " << foundAPIs << " in pebble binary \"" << appArchive.getBinaryPlatform(i) << "\"" << std::endl;
+
+			binaries.push_back(binary);
 		}
 
-		// Load binary
-		uint32_t size;
-		void* buffer = appArchive.extractBinary(i, &size, args.verbose);
-		if (!buffer)
-			continue;
-		PblAppBinary* binary = new PblAppBinary(buffer, size, &(*itPlatform)->library);
-
-		args.verbose && std::cerr << "Scanning pebble binary \"" << appArchive.getBinaryPlatform(i) << "\"" << std::endl;
-		uint32_t foundAPIs = binary->scan();
-		args.verbose && std::cerr << "Found " << foundAPIs << " in pebble binary \"" << appArchive.getBinaryPlatform(i) << "\"" << std::endl;
-
-		binaries.push_back(binary);
-	}
-
-	if (binaries.size() == 0) {
-		std::cerr << "Could not scan any pebble binary" << std::endl;
-		cleanPlatforms(platforms);
-		return 3;
+		if (binaries.size() == 0) {
+			std::cerr << "Could not scan any pebble binary" << std::endl;
+			cleanPlatforms(platforms);
+			return 4;
+		}
 	}
 
 	// Output (as JSON)
@@ -356,24 +407,36 @@ int main(int argc, char* argv[]) {
 		outputFile.open(args.outputFile.c_str(), std::ostream::out);
 		if (!outputFile) {
 			std::cerr << "Could not open output file" << std::endl;
-			return 4;
+			return 5;
 		}
 	}
 	std::ostream& output = (args.outputFile == "" ? std::cout : outputFile);
 
 	output << "{" << std::endl;
-	outputIndent(output, 1 * INDENT_WIDTH);
-	output << "\"platforms\": {" << std::endl;
-	for (uint32_t i = 0; i < binaries.size(); i++) {
-		if (i > 0)
-			output << "," << std::endl;
-		outputIndent(output, 2 * INDENT_WIDTH);
-		output << "\"" << binaries[i]->getPlatformName() << "\": ";
-		outputBinary(output, binaries[i], 2 * INDENT_WIDTH);
+	if (args.mapLibFunctions) {
+		outputIndent(output, 1 * INDENT_WIDTH);
+		output << "\"functions\": ";
+		outputFunctions(output, platforms, 1 * INDENT_WIDTH);
+		if (args.inputFile != "null")
+			output << ",";
+		output << std::endl;
 	}
-	output << std::endl;
-	outputIndent(output, 1 * INDENT_WIDTH);
-	output << "}" << std::endl << "}" << std::endl;
+
+	if (args.inputFile != "null") {
+		outputIndent(output, 1 * INDENT_WIDTH);
+		output << "\"platforms\": {" << std::endl;
+		for (uint32_t i = 0; i < binaries.size(); i++) {
+			if (i > 0)
+				output << "," << std::endl;
+			outputIndent(output, 2 * INDENT_WIDTH);
+			output << "\"" << binaries[i]->getPlatformName() << "\": ";
+			outputBinary(output, binaries[i], 2 * INDENT_WIDTH);
+		}
+		output << std::endl;
+		outputIndent(output, 1 * INDENT_WIDTH);
+		output << "}" << std::endl;
+	}
+	output << "}" << std::endl;
 	output.flush();
 
 	// Clean up and go home

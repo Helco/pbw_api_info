@@ -52,6 +52,7 @@ class PblLibrary {
 		ELFIO::section* section;
 		std::string name;
 		uint32_t relocatedOffset; // a 4 byte long relocation entry, which has to be ignored
+		uint32_t symbolTableOffset; // the index in the symbol table
 	};
 
 	ELFIO::elfio elf;
@@ -70,6 +71,7 @@ public:
 	const void* getFunctionCode(uint32_t index) const;
 	uint32_t getFunctionCodeSize(uint32_t index) const;
 	uint32_t getFunctionRelocatedOffset(uint32_t index) const;
+	uint32_t getFunctionSymbolTableOffset(uint32_t index) const;
 };
 
 /**

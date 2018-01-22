@@ -2,6 +2,33 @@
 
 #include <iostream>
 
+static bool is_little_endian() {
+	union {
+		uint8_t bytes[4];
+		uint32_t dword;
+	} u;
+	u.dword = 1;
+	return u.bytes[0] > 0;
+}
+
+static uint32_t swap_to_le(uint32_t val) {
+	union {
+		uint8_t bytes[4];
+		uint32_t dword;
+	} u;
+	if (is_little_endian())
+		return val;
+	u.dword = val;
+	uint8_t tmp = u.bytes[0];
+	u.bytes[0] = u.bytes[3];
+	u.bytes[3] = tmp;
+	tmp = u.bytes[1];
+	u.bytes[1] = u.bytes[2];
+	u.bytes[2] = tmp;
+	return u.dword;
+}
+
+
 class ElfMemoryLoader : public ELFIO::Loader {
 	const uint8_t* data;
 	uint32_t dataSize;
@@ -69,6 +96,7 @@ bool PblLibrary::loadFromELF(ELFIO::Loader* loader, bool verbose) {
 			function.section = *itSection;
 			function.name = (*itSection)->get_name().substr(6);
 			function.relocatedOffset = UINT32_MAX;
+			function.symbolTableOffset = UINT32_MAX;
 
 			// find relocation entry
 			ELFIO::section* relocSection = elf.sections[".rel.text." + function.name];
@@ -92,6 +120,12 @@ bool PblLibrary::loadFromELF(ELFIO::Loader* loader, bool verbose) {
 					function.relocatedOffset = static_cast<uint32_t>(offset);
 				}
 			}
+
+			// read out symbol table offset
+			if ((*itSection)->get_size() == 12)
+				function.symbolTableOffset = swap_to_le(*(uint32_t*)((*itSection)->get_data() + 8)) / 4;
+			else if (verbose)
+				std::cerr << "Unknown function format \"" << function.name << "\" is " << (*itSection)->get_size() << "B long" << std::endl;
 
 			functions.push_back(function);
 		}
@@ -136,4 +170,11 @@ uint32_t PblLibrary::getFunctionRelocatedOffset(uint32_t index) const {
 		return UINT32_MAX;
 	else
 		return functions[index].relocatedOffset;
+}
+
+uint32_t PblLibrary::getFunctionSymbolTableOffset(uint32_t index) const {
+	if (index >= functions.size())
+		return UINT32_MAX;
+	else
+		return functions[index].symbolTableOffset;
 }
